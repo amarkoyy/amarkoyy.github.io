@@ -11,6 +11,7 @@
 body{margin:0;background:var(--bg);color:var(--text);font-family:-apple-system,system-ui,"Segoe UI",Roboto,sans-serif;display:flex;justify-content:center;padding:16px}
 .card{background:var(--card);border-radius:20px;padding:20px;width:100%;max-width:600px;text-align:center}
 h1{font-size:1.6rem;margin:4px 0 8px}
+h2{font-size:1.3rem;margin:28px 0 10px}
 .sub{font-size:1.15rem;margin:0 0 16px}
 svg{width:100%;height:auto;display:block}
 polygon{fill:#f5f5f5;stroke:var(--line);stroke-width:4;stroke-linejoin:round;cursor:pointer;transition:fill .2s}
@@ -24,6 +25,21 @@ text{font-size:38px;fill:#222;pointer-events:none;text-anchor:middle;dominant-ba
 #msg{min-height:3em;font-weight:600;margin:0 0 8px}
 .bad{color:#e5484d}.ok{color:#2a9d4a}
 button.re{width:100%;padding:13px;border-radius:16px;border:1px solid var(--muted);background:transparent;color:var(--text);font-size:1.05rem;cursor:pointer}
+#sub{border:1px solid var(--muted);border-radius:16px;padding:14px;margin:0 0 12px}
+#sub[hidden],#form[hidden],#done[hidden]{display:none}
+#res{font-weight:600;margin:0 0 10px}
+#form{display:flex;gap:8px}
+#nm{flex:1;min-width:0;padding:11px;border-radius:12px;border:1px solid var(--muted);background:transparent;color:var(--text);font-size:16px}
+#send{padding:11px 16px;border-radius:12px;border:0;background:#2a9d4a;color:#fff;font-size:1rem;cursor:pointer}
+#send:disabled{opacity:.6}
+#st{color:var(--muted);font-size:.95rem;margin:8px 0 0;min-height:1.2em}
+.board{list-style:none;margin:0;padding:0;text-align:left}
+.board li{display:flex;gap:10px;padding:9px 4px;border-bottom:1px solid var(--line)}
+.board .rk{width:2em}
+.board .nmx{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.board .col{color:var(--muted)}
+.board .tm{min-width:4.5em;text-align:right;font-variant-numeric:tabular-nums}
+#bst{color:var(--muted);margin:6px 0 0}
 </style>
 </head>
 <body>
@@ -52,13 +68,28 @@ button.re{width:100%;padding:13px;border-radius:16px;border:1px solid var(--mute
   <div class="palette" id="pal"></div>
   <div class="stats"><span>Felhasznált színek: <b id="cnt">0</b></span><span>Hibák: <b id="err">0</b></span></div>
   <p id="msg"></p>
+  <div id="sub" hidden>
+    <p id="res"></p>
+    <div id="form">
+      <input id="nm" type="text" maxlength="20" placeholder="Becenév" autocomplete="nickname">
+      <button id="send">Beküldés</button>
+    </div>
+    <p id="done" class="ok" hidden>✓ Az eredményed felkerült a ranglistára!</p>
+    <p id="st"></p>
+  </div>
   <button class="re" id="reset">↻ Újrakezdés</button>
+
+  <h2>🏆 Ranglista</h2>
+  <ol class="board" id="board"></ol>
+  <p id="bst">Betöltés…</p>
 </div>
+
 <script>
 var COLORS=["#e76f51","#e9c46a","#2a9d8f","#6495ed"];
 var IDS=["A","B","C","D","E","F","G","H"];
 var PAIRS=[["A","B"],["A","C"],["B","D"],["B","E"],["C","D"],["C","F"],["C","G"],["D","E"],["D","F"],["E","F"],["E","H"],["F","G"],["F","H"]];
 var cur=1,state={};
+var startT=null,finishMs=0,wasValid=false,lastN=0,submitted=false;
 var pal=document.getElementById("pal");
 COLORS.forEach(function(c,i){
   var b=document.createElement("button");
@@ -68,8 +99,26 @@ COLORS.forEach(function(c,i){
 });
 IDS.forEach(function(id){
   state[id]=null;
-  document.getElementById(id).addEventListener("click",function(){state[id]=cur;update()});
+  document.getElementById(id).addEventListener("click",function(){
+    if(startT===null)startT=Date.now();
+    state[id]=cur;update();
+  });
 });
+function fmt(ms){
+  var s=ms/1000;
+  if(s<60)return s.toFixed(1)+" mp";
+  return Math.floor(s/60)+":"+("0"+Math.floor(s%60)).slice(-2);
+}
+function showSub(){
+  document.getElementById("sub").hidden=false;
+  document.getElementById("res").textContent=lastN+" szín, "+fmt(finishMs);
+  document.getElementById("form").hidden=submitted;
+  document.getElementById("done").hidden=!submitted;
+}
+function hideSub(){
+  document.getElementById("sub").hidden=true;
+  document.getElementById("st").textContent="";
+}
 function update(){
   var used={},all=true,bad={},errs=0;
   IDS.forEach(function(k){
@@ -90,8 +139,83 @@ function update(){
   else if(all&&n<=3){m.className="ok";m.textContent="Tökéletes! Csak "+n+" színt használtál."}
   else if(all){m.className="ok";m.textContent="Kész, de megoldható kevesebb színnel is. Próbáld újra!"}
   else{m.className="";m.textContent=""}
+  var valid=all&&!errs;
+  if(valid){
+    if(!wasValid||n!==lastN){finishMs=Date.now()-startT;submitted=false}
+    lastN=n;showSub();
+  }else{hideSub()}
+  wasValid=valid;
 }
-document.getElementById("reset").onclick=function(){IDS.forEach(function(k){state[k]=null});update()};
+document.getElementById("reset").onclick=function(){
+  IDS.forEach(function(k){state[k]=null});
+  startT=null;wasValid=false;submitted=false;
+  update();
+};
+
+try{var saved=localStorage.getItem("nm");if(saved)document.getElementById("nm").value=saved}catch(e){}
+
+document.getElementById("send").onclick=function(){
+  var st=document.getElementById("st");
+  var name=document.getElementById("nm").value.trim().slice(0,20);
+  if(!name){st.textContent="Adj meg egy becenevet!";return}
+  if(!window.LB){st.textContent="A ranglista most nem érhető el.";return}
+  var btn=this;btn.disabled=true;st.textContent="Küldés…";
+  window.LB.submit(name,lastN,Math.round(finishMs)).then(function(){
+    try{localStorage.setItem("nm",name)}catch(e){}
+    submitted=true;btn.disabled=false;st.textContent="";showSub();loadBoard();
+  }).catch(function(){
+    btn.disabled=false;st.textContent="Nem sikerült beküldeni. Próbáld újra!";
+  });
+};
+
+function loadBoard(){
+  var ol=document.getElementById("board"),bst=document.getElementById("bst");
+  window.LB.top().then(function(rows){
+    ol.innerHTML="";
+    bst.textContent=rows.length?"":"Még nincs eredmény. Légy te az első!";
+    var medals=["🥇","🥈","🥉"];
+    rows.forEach(function(r,i){
+      var li=document.createElement("li");
+      var a=document.createElement("span");a.className="rk";a.textContent=medals[i]||(i+1)+".";
+      var b=document.createElement("span");b.className="nmx";b.textContent=r.name;
+      var c=document.createElement("span");c.className="col";c.textContent=r.colors+" szín";
+      var d=document.createElement("span");d.className="tm";d.textContent=fmt(r.ms);
+      li.appendChild(a);li.appendChild(b);li.appendChild(c);li.appendChild(d);
+      ol.appendChild(li);
+    });
+  }).catch(function(){bst.textContent="A ranglista most nem érhető el."});
+}
+window.addEventListener("lbready",loadBoard);
+setTimeout(function(){
+  if(!window.LB)document.getElementById("bst").textContent="A ranglista most nem érhető el.";
+},8000);
+</script>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/13.4.0/firebase-app.js";
+import { getFirestore, collection, addDoc, query, orderBy, limit, getDocs, serverTimestamp } from "https://www.gstatic.com/firebasejs/13.4.0/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyCNlhWcYXt9HMEnzQPenrKefn4TcA5wmvY",
+  authDomain: "ranglista-570e5.firebaseapp.com",
+  projectId: "ranglista-570e5",
+  storageBucket: "ranglista-570e5.firebasestorage.app",
+  messagingSenderId: "595563756444",
+  appId: "1:595563756444:web:0ee82f2b02f43e35f8e659"
+};
+
+const db = getFirestore(initializeApp(firebaseConfig));
+const col = collection(db, "scores");
+
+window.LB = {
+  submit: (name, colors, ms) =>
+    addDoc(col, { name, colors, ms, score: colors * 10000000 + ms, t: serverTimestamp() }),
+  top: async () => {
+    const snap = await getDocs(query(col, orderBy("score"), limit(10)));
+    return snap.docs.map(d => d.data());
+  }
+};
+window.dispatchEvent(new Event("lbready"));
 </script>
 </body>
 </html>
