@@ -878,8 +878,8 @@ document.getElementById("send").onclick=function(){
   window.LB.submit(kind,name,lastN,Math.round(finishMs),curAttempt).then(function(){
     if(!getLocked())setLocked(name);
     submitted=true;btn.disabled=false;st.textContent="";showSub();syncReset();loadBoard();
-  }).catch(function(){
-    btn.disabled=false;st.textContent="Nem sikerült beküldeni. Próbáld újra!";
+  }).catch(function(err){
+    btn.disabled=false;st.textContent="Nem sikerült beküldeni. Próbáld újra!"+(err&&err.code?" ("+err.code+")":"");
   });
 };
 
@@ -931,7 +931,10 @@ const cols = { first: collection(db, "scores"), practice: collection(db, "practi
 
 window.LB = {
   submit: (kind, name, colors, ms, attempt) =>
-    addDoc(cols[kind], { name, colors, ms, attempt, kind, score: colors * 10000000 + ms, t: serverTimestamp() }),
+    addDoc(cols[kind], kind === "first"
+      /* az első próba pontosan a korábbi mezőkkel megy, hogy a meglévő szabályok elfogadják */
+      ? { name, colors, ms, score: colors * 10000000 + ms, t: serverTimestamp() }
+      : { name, colors, ms, attempt, score: colors * 10000000 + ms, t: serverTimestamp() }),
   top: async (kind) => {
     const snap = await getDocs(query(cols[kind], orderBy("score"), limit(10)));
     return snap.docs.map(d => d.data());
