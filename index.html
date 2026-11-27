@@ -211,13 +211,6 @@ h2{font:800 1.25rem/1.2 var(--font-display);letter-spacing:-.02em;margin:32px 0 
 .board .more>div{display:flex;justify-content:space-between;gap:12px;padding:5px 0;color:var(--muted);font-size:.92rem;font-variant-numeric:tabular-nums}
 .board .more>div.best{color:var(--fg);font-weight:600}
 .lbnote{margin:0 0 6px;color:var(--muted);font-size:.9rem}
-.lbhead{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:32px 0 6px}
-.lbhead h2{margin:0}
-.lbre{display:inline-flex;align-items:center;gap:6px;padding:7px 12px;border-radius:10px;border:1px solid var(--line);background:transparent;color:var(--fg);font:600 .88rem var(--font-body);cursor:pointer;transition:background .2s ease,opacity .2s ease}
-.lbre:hover{background:var(--btn-hover)}
-.lbre:disabled{opacity:.55;cursor:default}
-.lbre:focus-visible{outline:2px solid var(--fg);outline-offset:3px}
-.lbre .ico{display:inline-block;line-height:1}
 
 #fx,#shine{pointer-events:none}
 #fx polygon{fill:none;stroke:var(--gap);stroke-width:5;stroke-linejoin:round}
@@ -401,10 +394,7 @@ html:has(#intro:not([hidden])){overflow:hidden}
   </div>
   <button class="re rise" style="--d:.36s" id="reset"><span class="ico" id="ico">↻</span> Újrakezdés</button>
 
-  <div class="lbhead rise" style="--d:.42s">
-    <h2>Első próba 🏆</h2>
-    <button class="lbre" id="lbre" type="button"><span class="ico" id="lbico">↻</span> Frissítés</button>
-  </div>
+  <h2 class="rise" style="--d:.42s">Első próba 🏆</h2>
   <p class="lbnote">Csak az első kitöltések, vagyis a gondolkodás eredményei.</p>
   <ol class="board" id="board"></ol>
   <p id="bst">Betöltés…</p>
@@ -921,14 +911,14 @@ document.getElementById("send").onclick=function(){
   var kind=curAttempt<=1?"first":"practice";
   window.LB.submit(kind,name,lastN,Math.round(finishMs),curAttempt).then(function(){
     if(!getLocked())setLocked(name);
-    submitted=true;btn.disabled=false;st.textContent="";showSub();syncReset();loadBoard();
+    submitted=true;btn.disabled=false;st.textContent="";showSub();syncReset();
   }).catch(function(err){
     btn.disabled=false;st.textContent="Nem sikerült beküldeni. Próbáld újra!"+(err&&err.code?" ("+err.code+")":"");
   });
 };
 
-function renderBoard(kind,ol,bst){
-  return window.LB.top(kind).then(function(rows){
+function renderRows(kind,ol,bst,rows){
+  {
     var openKeys={};
     [].forEach.call(ol.querySelectorAll("li.open"),function(x){openKeys[x.getAttribute("data-k")]=1});
     ol.innerHTML="";
@@ -976,30 +966,28 @@ function renderBoard(kind,ol,bst){
         li.addEventListener("keydown",function(e){if(e.key==="Enter"||e.key===" "){e.preventDefault();tog()}});
       }
       ol.appendChild(li);
-      if(canAnim(li)){
+      if(canAnim(li)&&!ol.getAttribute("data-init")){
         li.animate([{opacity:0,transform:"translateY(8px)"},{opacity:1,transform:"none"}],
           {duration:420,delay:Math.min(i,20)*50,easing:"cubic-bezier(.2,.8,.2,1)",fill:"backwards"});
       }
     });
-  }).catch(function(){bst.textContent="A ranglista most nem érhető el."});
+    ol.setAttribute("data-init","1");
+  }
 }
-function loadBoard(){
-  return Promise.all([
-    renderBoard("first",document.getElementById("board"),document.getElementById("bst")),
-    renderBoard("practice",document.getElementById("board2"),document.getElementById("bst2"))
-  ]);
+/* élő ranglista: a Firestore magától küldi az új eredményeket, nem kell frissíteni */
+var boardsStarted=false;
+function startBoards(){
+  if(boardsStarted||!window.LB)return;
+  boardsStarted=true;
+  [["first","board","bst"],["practice","board2","bst2"]].forEach(function(c){
+    var ol=document.getElementById(c[1]),bst=document.getElementById(c[2]);
+    window.LB.listen(c[0],function(rows){renderRows(c[0],ol,bst,rows)},function(){
+      bst.textContent="A ranglista most nem érhető el.";
+    });
+  });
 }
-/* csak a ranglisták frissítése, az egész oldal újratöltése nélkül */
-var lbre=document.getElementById("lbre");
-lbre.onclick=function(){
-  if(!window.LB||lbre.disabled)return;
-  lbre.disabled=true;
-  var ico=document.getElementById("lbico");
-  var spin=canAnim(ico)?ico.animate([{transform:"rotate(0deg)"},{transform:"rotate(360deg)"}],{duration:700,iterations:Infinity,easing:"linear"}):null;
-  function end(){if(spin)spin.cancel();lbre.disabled=false}
-  Promise.all([loadBoard(),new Promise(function(r){setTimeout(r,500)})]).then(end,end);
-};
-window.addEventListener("lbready",loadBoard);
+window.addEventListener("lbready",startBoards);
+if(window.LB)startBoards();
 setTimeout(function(){
   if(!window.LB){document.getElementById("bst").textContent="A ranglista most nem érhető el.";document.getElementById("bst2").textContent="A ranglista most nem érhető el."}
 },8000);
@@ -1007,7 +995,7 @@ setTimeout(function(){
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/13.4.0/firebase-app.js";
-import { getFirestore, collection, addDoc, query, orderBy, limit, getDocs, serverTimestamp } from "https://www.gstatic.com/firebasejs/13.4.0/firebase-firestore.js";
+import { getFirestore, collection, addDoc, query, orderBy, limit, getDocs, onSnapshot, serverTimestamp } from "https://www.gstatic.com/firebasejs/13.4.0/firebase-firestore.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyCNlhWcYXt9HMEnzQPenrKefn4TcA5wmvY",
@@ -1027,10 +1015,10 @@ window.LB = {
       /* az első próba pontosan a korábbi mezőkkel megy, hogy a meglévő szabályok elfogadják */
       ? { name, colors, ms, score: colors * 10000000 + ms, t: serverTimestamp() }
       : { name, colors, ms, attempt, score: colors * 10000000 + ms, t: serverTimestamp() }),
-  top: async (kind) => {
-    const snap = await getDocs(query(cols[kind], orderBy("score")));
-    return snap.docs.map(d => d.data());
-  }
+  listen: (kind, onRows, onError) =>
+    onSnapshot(query(cols[kind], orderBy("score")),
+      snap => onRows(snap.docs.map(d => d.data())),
+      err => onError && onError(err))
 };
 window.dispatchEvent(new Event("lbready"));
 </script>
