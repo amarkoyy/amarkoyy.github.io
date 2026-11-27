@@ -250,8 +250,7 @@ html:has(#intro:not([hidden])){overflow:hidden}
 .rules>div:nth-child(3){animation-delay:1.1s}
 .rules>div:nth-child(4){animation-delay:1.3s}
 .rules>div:nth-child(5){animation-delay:1.5s}
-.sheet .wish{animation:rise 1s cubic-bezier(.2,.8,.2,1) 1.7s both;margin:0 0 18px;font-weight:600;text-wrap:balance}
-.go-btn{animation-delay:1.95s}
+.go-btn{animation-delay:1.75s}
 .sheet .it{font:800 1.6rem/1.15 var(--font-display);letter-spacing:-.03em;margin:0 0 14px}
 .rules{margin:0 0 22px}
 .rules>div{display:grid;grid-template-columns:5.6em minmax(0,1fr);gap:14px;padding:13px 0;border-top:1px solid var(--line)}
@@ -268,7 +267,7 @@ html:has(#intro:not([hidden])){overflow:hidden}
 
 @media (prefers-reduced-motion:reduce){
   .go .rise,.go .card{animation:none;opacity:1}
-  .intro,.sheet,.sheet .it,.sheet .wish,.rules>div,.go-btn{animation:none}
+  .intro,.sheet,.sheet .it,.rules>div,.go-btn{animation:none}
   .fallback i{animation:none}
   #errs polygon{animation:none}
   .clockbox.run .dot{animation:none}
@@ -316,7 +315,6 @@ html:has(#intro:not([hidden])){overflow:hidden}
       <div><dt>Beküldés</dt><dd>Ha elkészült az ábra, kötelező megadnod a beceneved, és beküldeni az eredményed a ranglistára. Amíg ez nem történt meg, nem kezdhetsz újat. Utána bármikor újrakezdheted.</dd></div>
       <div><dt>Sorrend</dt><dd>A ranglistán elsősorban a felhasznált színek száma számít, azonos színszámnál pedig a gyorsabb idő dönt. Az első kitöltésed az „Első próba” listára kerül, a további kitöltések a „Gyakorlás” listára, próbaszámmal. A beceneved az első beküldés után már nem módosítható.</dd></div>
     </dl>
-    <p class="wish">Kérek mindenkit a fair play betartására. Sok sikert, jó gondolkodást!</p>
     <button class="go-btn" id="go">Rendben, kezdjük!</button>
   </div>
 </div>
