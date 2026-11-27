@@ -310,10 +310,10 @@ html:has(#intro:not([hidden])){overflow:hidden}
   <div class="sheet">
     <h2 class="it" id="introT">Üdv a játékban!</h2>
     <dl class="rules">
-      <div><dt>Cél</dt><dd>A játék célja, hogy a térkép összes területét kiszínezd, mindössze 3 szín felhasználásával.</dd></div>
-      <div><dt>Színezés</dt><dd>Válassz egy színt, majd kattints a térkép egy területére. Egymás melletti területek nem kaphatják ugyanazt a színt, az ilyen hibákat piros szegély jelzi.</dd></div>
-      <div><dt>Idő</dt><dd>Az idő akkor indul, amikor az első terület kiszínezésre kerül, és akkor áll meg, amikor a térkép hibátlanul elkészült. Az újrakezdés menet közben nem nullázza az időt.</dd></div>
-      <div><dt>Beküldés</dt><dd>Ha elkészült a térkép, kötelező megadnod a beceneved, és beküldeni az eredményed a ranglistára. Amíg ez nem történt meg, nem kezdhetsz újat. Utána bármikor újrakezdheted.</dd></div>
+      <div><dt>Cél</dt><dd>A játék célja, hogy az ábra összes területét kiszínezd, mindössze 3 szín felhasználásával.</dd></div>
+      <div><dt>Színezés</dt><dd>Válassz egy színt, majd kattints az ábra egy területére. Egymás melletti területek nem kaphatják ugyanazt a színt, az ilyen hibákat piros szegély jelzi.</dd></div>
+      <div><dt>Idő</dt><dd>Az idő akkor indul, amikor az első terület kiszínezésre kerül, és akkor áll meg, amikor az ábra hibátlanul elkészült. Az újrakezdés menet közben nem nullázza az időt.</dd></div>
+      <div><dt>Beküldés</dt><dd>Ha elkészült az ábra, kötelező megadnod a beceneved, és beküldeni az eredményed a ranglistára. Amíg ez nem történt meg, nem kezdhetsz újat. Utána bármikor újrakezdheted.</dd></div>
       <div><dt>Sorrend</dt><dd>A ranglistán elsősorban a felhasznált színek száma számít, azonos színszámnál pedig a gyorsabb idő dönt. Az első kitöltésed az „Első próba” listára kerül, a további kitöltések a „Gyakorlás” listára, próbaszámmal. A beceneved az első beküldés után már nem módosítható.</dd></div>
     </dl>
     <p class="wish">Kérek mindenkit a fair play betartására. Sok sikert, jó gondolkodást!</p>
@@ -325,7 +325,7 @@ html:has(#intro:not([hidden])){overflow:hidden}
   <header class="head rise">
     <div class="ttl">
       <h1>Vajon nektek sikerül?</h1>
-      <p class="sub">Színezzétek ki a térképet minél kevesebb színnel!</p>
+      <p class="sub">Színezzétek ki az ábrát minél kevesebb színnel!</p>
     </div>
     <div class="clockbox" id="clockbox">
       <span class="clabel"><i class="dot"></i>Idő</span>
@@ -333,7 +333,7 @@ html:has(#intro:not([hidden])){overflow:hidden}
     </div>
   </header>
 
-  <svg class="map rise" style="--d:.1s" id="map" viewBox="-6 -6 932 764" role="group" aria-label="Térkép">
+  <svg class="map rise" style="--d:.1s" id="map" viewBox="-6 -6 932 764" role="group" aria-label="Ábra">
     <defs>
       <clipPath id="clip"><rect x="0" y="0" width="920" height="752" rx="30"/></clipPath>
       <linearGradient id="shG" x1="0" y1="0" x2="1" y2="0">
