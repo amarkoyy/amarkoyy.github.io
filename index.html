@@ -211,6 +211,13 @@ h2{font:800 1.25rem/1.2 var(--font-display);letter-spacing:-.02em;margin:32px 0 
 .board .more>div{display:flex;justify-content:space-between;gap:12px;padding:5px 0;color:var(--muted);font-size:.92rem;font-variant-numeric:tabular-nums}
 .board .more>div.best{color:var(--fg);font-weight:600}
 .lbnote{margin:0 0 6px;color:var(--muted);font-size:.9rem}
+.lbhead{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:32px 0 6px}
+.lbhead h2{margin:0}
+.lbre{display:inline-flex;align-items:center;gap:6px;padding:7px 12px;border-radius:10px;border:1px solid var(--line);background:transparent;color:var(--fg);font:600 .88rem var(--font-body);cursor:pointer;transition:background .2s ease,opacity .2s ease}
+.lbre:hover{background:var(--btn-hover)}
+.lbre:disabled{opacity:.55;cursor:default}
+.lbre:focus-visible{outline:2px solid var(--fg);outline-offset:3px}
+.lbre .ico{display:inline-block;line-height:1}
 
 #fx,#shine{pointer-events:none}
 #fx polygon{fill:none;stroke:var(--gap);stroke-width:5;stroke-linejoin:round}
@@ -394,7 +401,10 @@ html:has(#intro:not([hidden])){overflow:hidden}
   </div>
   <button class="re rise" style="--d:.36s" id="reset"><span class="ico" id="ico">↻</span> Újrakezdés</button>
 
-  <h2 class="rise" style="--d:.42s">Első próba 🏆</h2>
+  <div class="lbhead rise" style="--d:.42s">
+    <h2>Első próba 🏆</h2>
+    <button class="lbre" id="lbre" type="button"><span class="ico" id="lbico">↻</span> Frissítés</button>
+  </div>
   <p class="lbnote">Csak az első kitöltések, vagyis a gondolkodás eredményei.</p>
   <ol class="board" id="board"></ol>
   <p id="bst">Betöltés…</p>
@@ -918,7 +928,9 @@ document.getElementById("send").onclick=function(){
 };
 
 function renderBoard(kind,ol,bst){
-  window.LB.top(kind).then(function(rows){
+  return window.LB.top(kind).then(function(rows){
+    var openKeys={};
+    [].forEach.call(ol.querySelectorAll("li.open"),function(x){openKeys[x.getAttribute("data-k")]=1});
     ol.innerHTML="";
     bst.textContent=rows.length?"":(kind==="first"?"Még nincs eredmény. Légy te az első!":"Még nincs gyakorló eredmény.");
     var items=rows.map(function(r){return {name:r.name,colors:r.colors,ms:r.ms,all:null,best:r}});
@@ -932,7 +944,7 @@ function renderBoard(kind,ol,bst){
       });
       items=order.map(function(k){
         var l=g[k].list,best=l[0];
-        return {name:g[k].name,colors:best.colors,ms:best.ms,all:l,best:best};
+        return {key:k,name:g[k].name,colors:best.colors,ms:best.ms,all:l,best:best};
       });
     }
     items.forEach(function(it,i){
@@ -958,6 +970,8 @@ function renderBoard(kind,ol,bst){
         li.appendChild(more);
         li.setAttribute("tabindex","0");li.setAttribute("role","button");li.setAttribute("aria-expanded","false");
         var tog=function(){var o=li.classList.toggle("open");li.setAttribute("aria-expanded",o?"true":"false")};
+        li.setAttribute("data-k",it.key);
+        if(openKeys[it.key]){li.classList.add("open");li.setAttribute("aria-expanded","true")}
         li.addEventListener("click",tog);
         li.addEventListener("keydown",function(e){if(e.key==="Enter"||e.key===" "){e.preventDefault();tog()}});
       }
@@ -970,9 +984,21 @@ function renderBoard(kind,ol,bst){
   }).catch(function(){bst.textContent="A ranglista most nem érhető el."});
 }
 function loadBoard(){
-  renderBoard("first",document.getElementById("board"),document.getElementById("bst"));
-  renderBoard("practice",document.getElementById("board2"),document.getElementById("bst2"));
+  return Promise.all([
+    renderBoard("first",document.getElementById("board"),document.getElementById("bst")),
+    renderBoard("practice",document.getElementById("board2"),document.getElementById("bst2"))
+  ]);
 }
+/* csak a ranglisták frissítése, az egész oldal újratöltése nélkül */
+var lbre=document.getElementById("lbre");
+lbre.onclick=function(){
+  if(!window.LB||lbre.disabled)return;
+  lbre.disabled=true;
+  var ico=document.getElementById("lbico");
+  var spin=canAnim(ico)?ico.animate([{transform:"rotate(0deg)"},{transform:"rotate(360deg)"}],{duration:700,iterations:Infinity,easing:"linear"}):null;
+  function end(){if(spin)spin.cancel();lbre.disabled=false}
+  Promise.all([loadBoard(),new Promise(function(r){setTimeout(r,500)})]).then(end,end);
+};
 window.addEventListener("lbready",loadBoard);
 setTimeout(function(){
   if(!window.LB){document.getElementById("bst").textContent="A ranglista most nem érhető el.";document.getElementById("bst2").textContent="A ranglista most nem érhető el."}
