@@ -202,6 +202,14 @@ h2{font:800 1.25rem/1.2 var(--font-display);letter-spacing:-.02em;margin:32px 0 
 .board .col{color:var(--muted);flex:none}
 .board .tm{min-width:4.5em;text-align:right;font-variant-numeric:tabular-nums;font-weight:600;flex:none}
 #bst,#bst2{color:var(--muted);margin:8px 0 0}
+.board li.grp{flex-wrap:wrap;cursor:pointer;-webkit-user-select:none;user-select:none}
+.board li.grp:focus-visible{outline:2px solid var(--fg);outline-offset:2px;border-radius:6px}
+.board .chev{flex:none;color:var(--muted);font-size:.9rem;transition:transform .25s ease}
+.board li.open .chev{transform:rotate(180deg)}
+.board .more{flex:0 0 100%;display:none;margin:6px 0 2px;padding-left:calc(1.5em + 12px)}
+.board li.open .more{display:block}
+.board .more>div{display:flex;justify-content:space-between;gap:12px;padding:5px 0;color:var(--muted);font-size:.92rem;font-variant-numeric:tabular-nums}
+.board .more>div.best{color:var(--fg);font-weight:600}
 .lbnote{margin:0 0 6px;color:var(--muted);font-size:.9rem}
 
 #fx,#shine{pointer-events:none}
@@ -265,6 +273,32 @@ html:has(#intro:not([hidden])){overflow:hidden}
   #errs polygon{animation:none}
   .clockbox.run .dot{animation:none}
   *{transition-duration:.01ms!important}
+}
+/* ---------- telefon ---------- */
+@media (max-width:600px){
+  body{
+    padding-block:10px;
+    padding-left:max(10px,env(safe-area-inset-left,0px));
+    padding-right:max(10px,env(safe-area-inset-right,0px));
+  }
+  /* átlátszóbb kártya, hogy a mozgó háttér jól látszódjon */
+  .card{
+    padding:16px 12px;border-radius:20px;
+    background:color-mix(in srgb,var(--glass) 62%,transparent);
+    -webkit-backdrop-filter:blur(6px) saturate(1.15);backdrop-filter:blur(6px) saturate(1.15);
+  }
+  /* szélesebb térkép: nagyobb érintési felület */
+  .map{width:calc(100% + 16px);margin-left:-8px;max-width:none}
+  /* a még üres területek jobban kivehetők */
+  #regions polygon:not(.filled){fill:color-mix(in srgb,var(--fg) 12%,transparent)}
+  .palette{gap:20px}
+  .sw{width:46px;height:46px}
+  h2{margin-top:26px}
+}
+/* érintőképernyőn ne ragadjon be a hover */
+@media (hover:none){
+  #regions polygon:not(.filled):hover{fill:color-mix(in srgb,var(--fg) 12%,transparent)}
+  #regions polygon.filled:hover{filter:none}
 }
 </style>
 </head>
@@ -366,7 +400,7 @@ html:has(#intro:not([hidden])){overflow:hidden}
   <p id="bst">Betöltés…</p>
 
   <h2>Gyakorlás</h2>
-  <p class="lbnote">A további kitöltések, próbaszámmal.</p>
+  <p class="lbnote">Játékosonként a legjobb gyakorló eredmény, rákattintva az összes próbálkozás.</p>
   <ol class="board" id="board2"></ol>
   <p id="bst2">Betöltés…</p>
 </div>
@@ -399,7 +433,7 @@ function canAnim(el){return anim()&&el&&el.animate}
     "  return v;",
     "}",
     "void main(){",
-    "  vec2 uv=gl_FragCoord.xy/max(uRes.x,uRes.y);",
+    "  vec2 uv=gl_FragCoord.xy/sqrt(uRes.x*uRes.y);",
     "  vec2 p=uv*2.2;",
     "  vec2 dd=uv-uP;float g=exp(-dot(dd,dd)*16.0);",
     "  p+=vec2(-dd.y,dd.x)*g*1.6+dd*g*0.5;",
@@ -470,7 +504,7 @@ function canAnim(el){return anim()&&el&&el.animate}
 
   var px=-5,py=-5,tx=-5,ty=-5;
   window.addEventListener("pointermove",function(e){
-    var m=Math.max(window.innerWidth,window.innerHeight);
+    var m=Math.sqrt(window.innerWidth*window.innerHeight);
     tx=e.clientX/m;ty=(window.innerHeight-e.clientY)/m;
     if(px<-1){px=tx;py=ty}
   },{passive:true});
@@ -887,18 +921,50 @@ function renderBoard(kind,ol,bst){
   window.LB.top(kind).then(function(rows){
     ol.innerHTML="";
     bst.textContent=rows.length?"":(kind==="first"?"Még nincs eredmény. Légy te az első!":"Még nincs gyakorló eredmény.");
-    rows.forEach(function(r,i){
+    var items=rows.map(function(r){return {name:r.name,colors:r.colors,ms:r.ms,all:null,best:r}});
+    if(kind==="practice"){
+      /* játékosonként egy sor: a lekérdezés pontszám szerint rendezett, így az első találat a legjobb */
+      var g={},order=[];
+      rows.forEach(function(r){
+        var k=String(r.name||"").trim().toLowerCase();
+        if(!g[k]){g[k]={name:r.name,list:[]};order.push(k)}
+        g[k].list.push(r);
+      });
+      items=order.map(function(k){
+        var l=g[k].list,best=l[0];
+        return {name:g[k].name,colors:best.colors,ms:best.ms,all:l,best:best};
+      });
+    }
+    items.forEach(function(it,i){
       var li=document.createElement("li");
       var a=document.createElement("span");a.className="rk";a.textContent=String(i+1);
-      var b=document.createElement("span");b.className="nmx";b.textContent=r.name;
+      var b=document.createElement("span");b.className="nmx";b.textContent=it.name;
       var c=document.createElement("span");c.className="col";
-      c.textContent=r.colors+" szín"+(kind==="practice"&&r.attempt?" · "+r.attempt+". próba":"");
-      var d=document.createElement("span");d.className="tm";d.textContent=fmt(r.ms);
+      c.textContent=it.colors+" szín"+(it.all?" · "+it.all.length+" próba":"");
+      var d=document.createElement("span");d.className="tm";d.textContent=fmt(it.ms);
       li.appendChild(a);li.appendChild(b);li.appendChild(c);li.appendChild(d);
+      if(it.all&&it.all.length>1){
+        li.className="grp";
+        var ch=document.createElement("span");ch.className="chev";ch.textContent="▾";
+        li.appendChild(ch);
+        var more=document.createElement("div");more.className="more";
+        it.all.slice().sort(function(x,y){return (x.attempt||0)-(y.attempt||0)}).forEach(function(r){
+          var row=document.createElement("div");
+          if(r===it.best)row.className="best";
+          var l1=document.createElement("span");l1.textContent=(r.attempt?r.attempt+". próba":"próba")+" · "+r.colors+" szín";
+          var l2=document.createElement("span");l2.textContent=fmt(r.ms);
+          row.appendChild(l1);row.appendChild(l2);more.appendChild(row);
+        });
+        li.appendChild(more);
+        li.setAttribute("tabindex","0");li.setAttribute("role","button");li.setAttribute("aria-expanded","false");
+        var tog=function(){var o=li.classList.toggle("open");li.setAttribute("aria-expanded",o?"true":"false")};
+        li.addEventListener("click",tog);
+        li.addEventListener("keydown",function(e){if(e.key==="Enter"||e.key===" "){e.preventDefault();tog()}});
+      }
       ol.appendChild(li);
       if(canAnim(li)){
         li.animate([{opacity:0,transform:"translateY(8px)"},{opacity:1,transform:"none"}],
-          {duration:420,delay:i*50,easing:"cubic-bezier(.2,.8,.2,1)",fill:"backwards"});
+          {duration:420,delay:Math.min(i,20)*50,easing:"cubic-bezier(.2,.8,.2,1)",fill:"backwards"});
       }
     });
   }).catch(function(){bst.textContent="A ranglista most nem érhető el."});
@@ -936,7 +1002,7 @@ window.LB = {
       ? { name, colors, ms, score: colors * 10000000 + ms, t: serverTimestamp() }
       : { name, colors, ms, attempt, score: colors * 10000000 + ms, t: serverTimestamp() }),
   top: async (kind) => {
-    const snap = await getDocs(query(cols[kind], orderBy("score"), limit(10)));
+    const snap = await getDocs(query(cols[kind], orderBy("score")));
     return snap.docs.map(d => d.data());
   }
 };
